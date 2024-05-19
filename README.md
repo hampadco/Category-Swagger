@@ -85,6 +85,62 @@ public class MyController : ControllerBase
     // متدهای اکشن
 }
 ```
+***************************************************************************************************************************************
+برای رفع مشکل "GetApiConventionDescriptionSummary" در .NET 7، باید یک extension method را به پروژه اضافه کنید. این متد در نسخه های قبلی .NET Core وجود داشت، اما در نسخه 7 حذف شده است.
+
+ابتدا یک کلاس جدید با نام "ApiDescriptionExtensions.cs" در پروژه خود ایجاد کنید و کد زیر را در آن قرار دهید:
+
+```csharp
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using System.Reflection;
+
+namespace YourNamespace
+{
+    public static class ApiDescriptionExtensions
+    {
+        public static string GetApiConventionDescriptionSummary(this ApiDescription apiDescription)
+        {
+            string? controllerName = apiDescription.ActionDescriptor.RouteValues["controller"];
+            string? actionName = apiDescription.ActionDescriptor.RouteValues["action"];
+
+            MethodInfo? methodInfo = apiDescription.ActionDescriptor.GetMethodInfo();
+            if (methodInfo == null)
+            {
+                return string.Empty;
+            }
+
+            string summary = $"{controllerName}/{actionName}";
+            return summary;
+        }
+    }
+}
+```
+
+سپس، در فایل `Program.cs`، در قسمت تنظیمات Swagger، کد زیر را اصلاح کنید:
+
+```csharp
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+    c.TagActionsBy(api =>
+    {
+        if (api.GroupName != null)
+        {
+            return new[] { api.GroupName };
+        }
+
+        var controllerName = api.ActionDescriptor.RouteValues["controller"];
+        return new[] { controllerName };
+    });
+    c.DocInclusionPredicate((docName, apiDesc) =>
+    {
+        return true; // or any other condition you want
+    });
+});
+```
+
+با این تغییرات، مشکل "GetApiConventionDescriptionSummary" برطرف خواهد شد و می توانید تگ ها را در Swagger نمایش دهید.
 
 با این تنظیمات، در رابط کاربری Swagger یک Dropdown برای انتخاب تگ ها (Tags) نمایش داده می شود. هر تگ، سرویس های مربوط به یک کنترلر خاص را نشان می دهد.
 
